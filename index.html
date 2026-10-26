@@ -266,13 +266,14 @@ function drawCards(s,count){
 }
 function hardware(s){const b=s.b;const thermal=b.heat<=60?1:Math.max(.45,1-(b.heat-60)*.012);
  const requested=b.chipDemand+.35,powerRatio=Math.min(1,b.powerBudget/requested);
- return {compute:989*(1+b.boost)*s.world.compute*thermal*Math.min(1.5,b.power),hbm:(b.platform?4.8:3.35)*(1+b.hbmBoost)*s.world.hbm,memory:(b.platform?141:80)+b.extraCapacity,network:40*(1+b.net)*s.world.network,ssd:7,thermal,power:b.power,powerRatio,requested,powerBudget:b.powerBudget};}
+ const nominalCompute=989*(1+b.boost)*s.world.compute*thermal*Math.min(1.5,b.power);
+ return {compute:nominalCompute*powerRatio,nominalCompute,hbm:(b.platform?4.8:3.35)*(1+b.hbmBoost)*s.world.hbm,memory:(b.platform?141:80)+b.extraCapacity,network:40*(1+b.net)*s.world.network,ssd:7,thermal,power:b.power,powerRatio,requested,powerBudget:b.powerBudget};}
 function model(s,c=null){
  const b=s.b,p=PROFILES[b.enemy.profile],h=hardware(s);
  const footprint=(c?.footprint||p.footprint)*b.quant+b.extraMem;
  const capacity=footprint<=h.memory;
  // Aggregate duty cycle under an IT budget, not a claim that link clocks scale linearly.
- const times={compute:p.f/h.compute/h.powerRatio,memory:p.hbm*b.traffic*b.quant/h.hbm/h.powerRatio,network:p.net*b.comm/h.network/h.powerRatio,storage:p.io*b.io/h.ssd/h.powerRatio};
+ const times={compute:p.f/h.compute,memory:p.hbm*b.traffic*b.quant/h.hbm/h.powerRatio,network:p.net*b.comm/h.network/h.powerRatio,storage:p.io*b.io/h.ssd/h.powerRatio};
  const bottleneck=Object.keys(times).reduce((a,k)=>times[k]>times[a]?k:a,'compute');
  const seconds=times[bottleneck],efficiency=Math.min(2.2,10/seconds)*b.quality;
  const base=(c?.base||11)+(s.relics.includes('compiler')?2:0)+(c?.netBonus&&b.net>=.8?c.netBonus:0)+(c?.combo||0)*b.turnPlayed+(c?.cpx&&b.enemy.profile==='compute'?8:0);
